@@ -73,3 +73,41 @@ def test_multiple_funds_and_withdraw(coffee, account):
 
 def test_get_rate(coffee):
     assert coffee.get_eth_to_usd_rate(SEND_VALUE) > 0
+
+def test_default_fallback_function(coffee, account):
+    # Arrange
+    boa.env.set_balance(account.address, SEND_VALUE*10)
+    initial_contract_balance = boa.env.get_balance(coffee.address)
+    
+    # Act
+    # Send Ether directly to the contract address using raw_call
+    with boa.env.prank(account.address):
+        boa.env.raw_call(to_address=coffee.address, value=SEND_VALUE)
+    
+    # Assert
+    # Check that the contract balance increased
+    assert boa.env.get_balance(coffee.address) == initial_contract_balance + SEND_VALUE
+    
+    # Check that the sender is recorded in funders
+    funder = coffee.funders(0)
+    assert funder == account.address
+    assert coffee.funder_to_amount_funded(funder) == SEND_VALUE
+
+# Same as above. Calls __default__() directly for test coverage
+def test_default_fallback_function_direct(coffee, account):
+    # Arrange
+    boa.env.set_balance(account.address, SEND_VALUE*10)
+    initial_contract_balance = boa.env.get_balance(coffee.address)
+    
+    # Act
+    with boa.env.prank(account.address):
+        coffee.__default__(value=SEND_VALUE)
+    
+    # Assert
+    # Check that the contract balance increased
+    assert boa.env.get_balance(coffee.address) == initial_contract_balance + SEND_VALUE
+    
+    # Check that the sender is recorded in funders
+    funder = coffee.funders(0)
+    assert funder == account.address
+    assert coffee.funder_to_amount_funded(funder) == SEND_VALUE
